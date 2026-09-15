@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}} — Interactive Quiz</title>
+<style>
+:root{
+  --purple:#632ca6; --purple-2:#7b3fd1; --indigo:#4b2e83;
+  --bg:#f4f5fb; --panel:#ffffff; --card:#ffffff; --ink:#1c1033; --muted:#6b6480;
+  --line:#e7e4f0; --shadow:0 8px 30px rgba(60,30,110,.08);
+  --green:#1f9d55; --green-bg:#e7f7ee; --red:#d13b47; --red-bg:#fdeced;
+  --amber:#d98a00; --track:#ece8f6;
+  --radius:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14101f; --panel:#1a1428; --card:#1e1830; --ink:#f1ecff; --muted:#a79fc0;
+    --line:#302842; --shadow:0 8px 30px rgba(0,0,0,.35);
+    --green:#39c07d; --green-bg:#122a1f; --red:#ff6b78; --red-bg:#2c1519;
+    --track:#2a2340;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:920px;margin:0 auto;padding:22px 18px 80px}
+.hidden{display:none!important}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+h1,h2,h3{margin:0;line-height:1.2}
+.small{font-size:.82rem;color:var(--muted)}
+
+/* Site sidebar (present on every page — home index and every quiz) */
+.layout{display:flex;align-items:flex-start;min-height:100vh}
+.sidebar{width:270px;flex:0 0 auto;background:var(--panel);border-right:1px solid var(--line);
+  min-height:100vh;padding:18px 14px;position:sticky;top:0}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 6px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.brand .logo{width:36px;height:36px;border-radius:10px;flex:0 0 auto;font-size:18px;
+  background:linear-gradient(135deg,var(--purple),var(--purple-2));
+  display:flex;align-items:center;justify-content:center}
+.brand b{font-size:1rem}
+.brand span{display:block;font-size:.7rem;color:var(--muted);margin-top:1px}
+.cat-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:9px 8px;border-radius:8px;
+  font-weight:600;font-size:.86rem;text-align:left}
+.cat-toggle:hover{background:var(--track)}
+.cat-toggle .chev{margin-left:auto;font-size:.7rem;color:var(--muted);transition:transform .15s}
+.cat-toggle.open .chev{transform:rotate(90deg)}
+.cat-toggle .count{font-size:.72rem;color:var(--muted);font-weight:400}
+.cat-topics{list-style:none;margin:2px 0 8px;padding:0 0 0 20px;display:flex;flex-direction:column;gap:1px}
+.cat-topics a{display:block;padding:6px 10px;border-radius:7px;font-size:.82rem;color:var(--muted)}
+.cat-topics a:hover{background:var(--track);color:var(--ink)}
+.cat-topics a.current{background:var(--track);color:var(--ink);font-weight:700}
+.cat-empty{padding:6px 10px;font-size:.76rem;color:var(--muted);font-style:italic}
+.page-main{flex:1;min-width:0}
+
+@media (max-width:720px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;min-height:0;position:static;border-right:none;border-bottom:1px solid var(--line)}
+}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.logo{width:44px;height:44px;border-radius:12px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--purple),var(--purple-2));
+  display:flex;align-items:center;justify-content:center;font-size:22px}
+.topbar h1{font-size:1.35rem}
+.topbar p{margin:2px 0 0;font-size:.8rem;color:var(--muted)}
+
+/* Mode tabs */
+.tabs{display:flex;gap:6px;background:var(--track);border-radius:12px;padding:4px;margin-bottom:18px;width:fit-content}
+.tab{padding:8px 18px;border-radius:9px;font-weight:600;font-size:.86rem;color:var(--muted);transition:.15s}
+.tab.active{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+
+/* Overall progress strip */
+.ov-strip{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px 18px;margin-bottom:22px;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.ov-strip .stat{display:flex;flex-direction:column}
+.ov-strip .stat b{font-size:1.5rem;line-height:1}
+.ov-strip .stat span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.ov-bar{flex:1 1 180px;min-width:160px}
+.track{height:10px;background:var(--track);border-radius:999px;overflow:hidden}
+.track>i{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--purple-2));border-radius:999px;transition:width .4s}
+.ov-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{border-radius:11px;padding:10px 16px;font-weight:600;font-size:.9rem;border:1px solid transparent;transition:.15s}
+.btn.primary{background:linear-gradient(135deg,var(--purple),var(--purple-2));color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:var(--card);border-color:var(--line);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--purple)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Group heading */
+.group-h{display:flex;align-items:center;gap:10px;margin:26px 2px 12px}
+.group-h h2{font-size:1.02rem;letter-spacing:.02em}
+.group-h .count{font-size:.74rem;color:var(--muted)}
+.group-h::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* Section cards grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px;text-align:left;display:flex;flex-direction:column;gap:10px;
+  transition:transform .12s, border-color .12s}
+.card:hover{transform:translateY(-3px);border-color:var(--purple)}
+.card .ic{font-size:24px}
+.card .title{font-weight:700;font-size:.98rem}
+.card .meta{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.card .qn{font-size:.76rem;color:var(--muted)}
+.badge{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:999px}
+.badge.none{background:var(--track);color:var(--muted)}
+.badge.done{color:#fff}
+.mini{height:6px;background:var(--track);border-radius:999px;overflow:hidden}
+.mini>i{display:block;height:100%;border-radius:999px}
+
+/* Quiz view */
+.quiz-head{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.quiz-head .ic{font-size:26px}
+.quiz-head h2{font-size:1.15rem}
+.crumb{font-size:.78rem;color:var(--muted);margin-bottom:16px}
+.qprogress{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.qprogress .track{flex:1}
+.qprogress .lab{font-size:.82rem;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.qcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:22px}
+.qtext{font-size:1.12rem;font-weight:650;margin-bottom:18px}
+.opts{display:flex;flex-direction:column;gap:11px}
+.opt{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;border:1.5px solid var(--line);
+  border-radius:12px;background:var(--card);text-align:left;transition:.12s;width:100%}
+.opt:hover{border-color:var(--purple)}
+.opt.sel{border-color:var(--purple);background:color-mix(in srgb,var(--purple) 8%,var(--card))}
+.opt .key{flex:0 0 auto;width:26px;height:26px;border-radius:7px;background:var(--track);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem}
+.opt.sel .key{background:var(--purple);color:#fff}
+.opt .txt{flex:1;padding-top:2px}
+/* review states */
+.opt.correct{border-color:var(--green);background:var(--green-bg)}
+.opt.correct .key{background:var(--green);color:#fff}
+.opt.wrong{border-color:var(--red);background:var(--red-bg)}
+.opt.wrong .key{background:var(--red);color:#fff}
+.opt .mark{margin-left:auto;font-weight:700;align-self:center}
+.opt.disabled{cursor:default}
+.opt.disabled:hover{border-color:var(--line)}
+.opt.disabled.correct:hover{border-color:var(--green)}
+.opt.disabled.wrong:hover{border-color:var(--red)}
+
+.qnav{display:flex;justify-content:space-between;gap:10px;margin-top:22px}
+.dots{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0;justify-content:center}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--track);border:1.5px solid transparent}
+.dot.answered{background:var(--purple)}
+.dot.current{border-color:var(--ink)}
+
+/* Result */
+.result-top{display:flex;align-items:center;gap:22px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:20px;flex-wrap:wrap}
+.ring{--p:0;--c:var(--purple);width:108px;height:108px;border-radius:50%;flex:0 0 auto;
+  background:conic-gradient(var(--c) calc(var(--p)*1%), var(--track) 0);
+  display:flex;align-items:center;justify-content:center}
+.ring>div{width:82px;height:82px;border-radius:50%;background:var(--card);
+  display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring b{font-size:1.5rem;line-height:1}
+.ring span{font-size:.68rem;color:var(--muted)}
+.result-msg h2{font-size:1.3rem;margin-bottom:4px}
+.result-msg p{margin:0;color:var(--muted);font-size:.9rem}
+
+.review{display:flex;flex-direction:column;gap:14px}
+.rev-item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.rev-item .rq{font-weight:650;margin-bottom:12px;display:flex;gap:9px}
+.rev-item .rq .n{color:var(--muted);font-variant-numeric:tabular-nums}
+.rev-row{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;padding:5px 0}
+.rev-row .tag{flex:0 0 auto;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:1px}
+.tag.ok{background:var(--green-bg);color:var(--green)}
+.tag.no{background:var(--red-bg);color:var(--red)}
+.explain{margin-top:10px;font-size:.86rem;color:var(--muted);background:var(--track);
+  border-radius:10px;padding:9px 12px}
+.explain b{color:var(--ink)}
+
+/* Summary bars */
+.sumrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.sumrow:last-child{border-bottom:none}
+.sumrow .nm{flex:0 0 40%;font-size:.86rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sumrow .bar{flex:1;height:14px;background:var(--track);border-radius:999px;overflow:hidden}
+.sumrow .bar>i{display:block;height:100%;border-radius:999px}
+.sumrow .sc{flex:0 0 auto;font-size:.8rem;font-variant-numeric:tabular-nums;width:66px;text-align:right;color:var(--muted)}
+.sumrow .nm .no{color:var(--muted);font-weight:400;font-size:.76rem}
+
+.center{text-align:center}
+.footer-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.note{font-size:.75rem;color:var(--muted);text-align:center;margin-top:30px}
+kbd{background:var(--track);border-radius:6px;padding:1px 6px;font-size:.75rem;font-family:inherit}
+
+/* QA view */
+.qa-list{display:flex;flex-direction:column;gap:12px}
+.qa-item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.qa-item .qq{font-weight:650;font-size:1rem;margin-bottom:10px}
+.qa-toggle{font-size:.8rem;font-weight:700;color:var(--purple);padding:4px 0}
+.qa-answer{margin-top:10px;font-size:.9rem;line-height:1.55;color:var(--ink);background:var(--track);
+  border-radius:10px;padding:12px 14px}
+.qa-answer p{margin:0 0 8px}
+.qa-answer p:last-child{margin-bottom:0}
+.qa-answer ul{margin:2px 0 8px;padding-left:20px}
+.qa-answer ul:last-child{margin-bottom:0}
+.qa-answer li{margin:3px 0}
+.qa-answer code{background:var(--card);border:1px solid var(--line);border-radius:5px;
+  padding:1px 5px;font-size:.85em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <nav class="sidebar" id="sidebar">
+    <a class="brand" href="../index.html">
+      <div class="logo">📚</div>
+      <div>
+        <b>seft-quiz</b>
+        <span>All topics</span>
+      </div>
+    </a>
+    <div id="catList"></div>
+  </nav>
+
+  <div class="page-main">
+  <div class="wrap">
+
+  <div class="topbar">
+    <div class="logo">{{ICON}}</div>
+    <div>
+      <h1>{{TITLE}} — Quiz</h1>
+      <p>{{SUBTITLE}}</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabMc">🔤 Multiple Choice</button>
+    <button class="tab" id="tabQa">💬 Q&amp;A</button>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <section id="home">
+    <div class="ov-strip" id="ovStrip">
+      <div class="stat"><b id="ovPct">0%</b><span>Overall</span></div>
+      <div class="ov-bar">
+        <div class="track"><i id="ovBar" style="width:0%"></i></div>
+        <div class="small" id="ovSub" style="margin-top:6px">Sections done: 0 / 0</div>
+      </div>
+      <div class="ov-actions">
+        <button class="btn ghost" id="btnSummary">📊 Overall summary</button>
+        <button class="btn ghost" id="btnReset">↺ Reset progress</button>
+      </div>
+    </div>
+    <div id="groups"></div>
+    <p class="note" id="modeNote">Tip: use keys <kbd>1</kbd>–<kbd>4</kbd> to pick an answer and <kbd>Enter</kbd> for next. Progress saves in this browser.</p>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="quiz" class="hidden">
+    <div class="crumb"><button class="btn ghost" id="qBack" style="padding:5px 12px">← Menu</button></div>
+    <div class="quiz-head"><span class="ic" id="qIcon">📘</span><h2 id="qTitle"></h2></div>
+    <div class="qprogress">
+      <div class="track"><i id="qBar" style="width:0%"></i></div>
+      <div class="lab" id="qLab">1 / 1</div>
+    </div>
+    <div class="qcard">
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+    </div>
+    <div class="dots" id="qDots"></div>
+    <div class="qnav">
+      <button class="btn ghost" id="qPrev">← Prev</button>
+      <button class="btn primary" id="qNext">Next →</button>
+    </div>
+  </section>
+
+  <!-- ============ RESULT ============ -->
+  <section id="result" class="hidden">
+    <div class="crumb"><button class="btn ghost" id="rBack" style="padding:5px 12px">← Menu</button></div>
+    <div class="result-top">
+      <div class="ring" id="rRing"><div><b id="rScore">0/0</b><span id="rPct">0%</span></div></div>
+      <div class="result-msg">
+        <h2 id="rTitle"></h2>
+        <p id="rMsg"></p>
+      </div>
+    </div>
+    <div class="review" id="rReview"></div>
+    <div class="footer-actions">
+      <button class="btn ghost" id="rRetry">↺ Retry section</button>
+      <button class="btn ghost" id="rMenu">← Back to menu</button>
+      <button class="btn primary" id="rNextSec">Next section →</button>
+    </div>
+  </section>
+
+  <!-- ============ QA ============ -->
+  <section id="qa" class="hidden">
+    <div class="crumb"><button class="btn ghost" id="qaBack" style="padding:5px 12px">← Menu</button></div>
+    <div class="quiz-head"><span class="ic" id="qaIcon">📘</span><h2 id="qaTitle"></h2></div>
+    <div class="qa-list" id="qaList"></div>
+  </section>
+
+  <!-- ============ SUMMARY ============ -->
+  <section id="summary" class="hidden">
+    <div class="crumb"><button class="btn ghost" id="sBack" style="padding:5px 12px">← Menu</button></div>
+    <div class="result-top">
+      <div class="ring" id="sRing"><div><b id="sScore">0%</b><span>overall</span></div></div>
+      <div class="result-msg">
+        <h2>Overall summary</h2>
+        <p id="sMsg"></p>
+      </div>
+    </div>
+    <div class="qcard"><div id="sBars"></div></div>
+    <div class="footer-actions">
+      <button class="btn ghost" id="sMenu">← Back to menu</button>
+      <button class="btn primary" id="sReset">↺ Reset all progress</button>
+    </div>
+  </section>
+
+  </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   SIDEBAR MANIFEST — snapshot of index.html's MANIFEST at the time
+   this file was generated/last synced. Same reasoning as index.html:
+   inline JS, not fetched JSON, so this still works opened via file://.
+   Paths here are relative to the quizzes/ folder (bare filename, no
+   "quizzes/" prefix); the "../index.html" links above go up one level.
+   Keep this in sync with index.html's MANIFEST — see SKILL.md step 7.
+============================================================ */
+const SIDEBAR_MANIFEST = [
+  {category:"Backend",        icon:"⚙️", topics:[]},
+  {category:"Infrastructure", icon:"☁️", topics:[]},
+  {category:"AI",             icon:"🤖", topics:[]},
+  {category:"System Design",  icon:"🧩", topics:[]},
+  {category:"Behavioral",     icon:"🗣️", topics:[]},
+];
+(function renderSidebar(){
+  const slugify = s=> s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+  const list = document.getElementById("catList");
+  SIDEBAR_MANIFEST.forEach(cat=>{
+    const toggle = document.createElement("button");
+    toggle.className = "cat-toggle";
+    const hasCurrent = cat.topics.some(t=>t.file==="{{SLUG}}.html");
+    toggle.innerHTML = `<span>${cat.icon}</span><span>${cat.category}</span><span class="count">${cat.topics.length}</span><span class="chev">▶</span>`;
+    list.appendChild(toggle);
+
+    const ul = document.createElement("ul");
+    ul.className = "cat-topics" + (hasCurrent ? "" : " hidden");
+    if(hasCurrent) toggle.classList.add("open");
+    if(cat.topics.length===0){
+      ul.innerHTML = `<li class="cat-empty">No topics yet</li>`;
+    } else {
+      cat.topics.forEach(t=>{
+        const a = document.createElement("a");
+        a.href = t.file; a.textContent = `${t.icon} ${t.title}`;
+        if(t.file==="{{SLUG}}.html") a.classList.add("current");
+        const li = document.createElement("li"); li.appendChild(a);
+        ul.appendChild(li);
+      });
+    }
+    list.appendChild(ul);
+    toggle.onclick = ()=>{
+      const willOpen = ul.classList.contains("hidden");
+      ul.classList.toggle("hidden", !willOpen);
+      toggle.classList.toggle("open", willOpen);
+    };
+  });
+})();
+
+/* ============================================================
+   DATA — sections grouped by topic, ordered beginner -> deep-dive
+   within each section. Each section carries TWO parallel question
+   sets covering the same sub-topic:
+     mc: multiple choice — { q, options:[...], answer:<index of
+         correct option in THIS array, 0-based>, explain }
+     qa: open question/answer, answer hidden until toggled — { q, a }
+   No credentials/secrets are stored here by design.
+============================================================ */
+const SECTIONS = [
+/* ---------- Example section (schema reference — replace all of this) ----------
+{id:"unique-kebab-id",group:"Fundamentals",title:"Section Title",icon:"🌐",
+ mc:[
+  {q:"Beginner-level question text?",options:["Option A","Correct option","Option C","Option D"],answer:1,explain:"Why the correct option is correct, and why the closest wrong option is wrong."},
+  {q:"A deeper, internals/edge-case question for the same section?",options:["Option A","Option B","Correct option","Option D"],answer:2,explain:"Teach the underlying mechanism, not just restate the answer."},
+ ],
+ qa:[
+  {q:"Beginner-level open question — what is X and why does it exist?",a:"Free-text answer, as long as it needs to be."},
+  {q:"A deeper open question — what happens internally when X fails?",a:"Answer covering the mechanism/edge case, not just a restatement of the question."},
+ ]},
+------------------------------------------------------------------------------ */
+];
+
+/* ============================================================
+   ENGINE — do not edit below this line when generating a quiz.
+============================================================ */
+const $ = (id)=>document.getElementById(id);
+const views = ["home","quiz","result","qa","summary"];
+function show(v){ views.forEach(x=>$(x).classList.toggle("hidden", x!==v)); window.scrollTo(0,0); }
+
+/* ---------- MODE (multichoice vs qa tab) ---------- */
+let mode = "mc";
+const MC_TIP = 'Tip: use keys <kbd>1</kbd>–<kbd>4</kbd> to pick an answer and <kbd>Enter</kbd> for next. Progress saves in this browser.';
+const QA_TIP = 'Tip: click a question to reveal its answer, click again to hide it. Nothing here is scored.';
+function setMode(m){
+  mode = m;
+  $("tabMc").classList.toggle("active", m==="mc");
+  $("tabQa").classList.toggle("active", m==="qa");
+  $("ovStrip").classList.toggle("hidden", m==="qa");
+  $("modeNote").innerHTML = m==="mc" ? MC_TIP : QA_TIP;
+  renderHome();
+  show("home");
+}
+$("tabMc").onclick = ()=> setMode("mc");
+$("tabQa").onclick = ()=> setMode("qa");
+
+const STORE_KEY = "quiz_progress_{{SLUG}}_v1";
+let store = loadStore();
+function loadStore(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY))||{}; }catch(e){ return {}; } }
+function saveStore(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)); }catch(e){} }
+
+function pct(a,b){ return b? Math.round(a/b*100):0; }
+function scoreColor(p){ return p>=80?"var(--green)": p>=50?"var(--amber)":"var(--red)"; }
+
+/* Tiny markdown -> HTML for QA answers: "* " bullet lines become <li>,
+   blank-line-separated text becomes <p>, **bold** / *italic* / `code`
+   inline. Bold runs before italic so **x** isn't half-eaten by the
+   single-asterisk rule. Input is trusted (authored, already HTML-escaped
+   for raw <, >, & per the skill's own rule) — this only adds tags. */
+function mdToHtml(text){
+  const lines = String(text).split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  let html = "", inList = false;
+  const inline = s => s
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/\*(.+?)\*/g, "<i>$1</i>")
+    .replace(/`([^`]+?)`/g, "<code>$1</code>");
+  lines.forEach(line=>{
+    const isBullet = /^[*-]\s+/.test(line);
+    const content = inline(isBullet ? line.replace(/^[*-]\s+/, "") : line);
+    if(isBullet){
+      if(!inList){ html += "<ul>"; inList = true; }
+      html += `<li>${content}</li>`;
+    } else {
+      if(inList){ html += "</ul>"; inList = false; }
+      html += `<p>${content}</p>`;
+    }
+  });
+  if(inList) html += "</ul>";
+  return html;
+}
+
+/* ----- runtime state for the active section -----
+   cur.qs holds a per-attempt working copy of the questions with the
+   options shuffled, so the correct answer isn't always in the same slot. */
+let cur = { secIdx:0, qIdx:0, answers:[], qs:[] };
+
+function shuffledQuestions(section){
+  return section.mc.map(q=>{
+    const idx = q.options.map((_,i)=>i);
+    for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+    return {
+      q: q.q,
+      options: idx.map(i=>q.options[i]),
+      answer: idx.indexOf(q.answer),
+      explain: q.explain
+    };
+  });
+}
+
+/* ---------- HOME ---------- */
+function renderHome(){
+  const groups = {};
+  SECTIONS.forEach((s,i)=>{ (groups[s.group] ||= []).push(i); });
+  const host = $("groups"); host.innerHTML="";
+  Object.keys(groups).forEach(g=>{
+    const head = document.createElement("div"); head.className="group-h";
+    head.innerHTML = `<h2>${g}</h2><span class="count">${groups[g].length} sections</span>`;
+    host.appendChild(head);
+    const grid = document.createElement("div"); grid.className="grid";
+    groups[g].forEach(i=>{
+      const s = SECTIONS[i];
+      const card = document.createElement("button"); card.className="card";
+      if(mode==="mc"){
+        const rec = store[s.id];
+        let badge = `<span class="badge none">Not started</span>`;
+        let mini = "";
+        if(rec){
+          const p = pct(rec.best, s.mc.length);
+          const c = scoreColor(p);
+          badge = `<span class="badge done" style="background:${c}">${p}%</span>`;
+          mini = `<div class="mini"><i style="width:${p}%;background:${c}"></i></div>`;
+        }
+        card.innerHTML = `
+          <div class="ic">${s.icon}</div>
+          <div class="title">${s.title}</div>
+          ${mini}
+          <div class="meta"><span class="qn">${s.mc.length} questions</span>${badge}</div>`;
+        card.onclick = ()=> startSection(i);
+      } else {
+        card.innerHTML = `
+          <div class="ic">${s.icon}</div>
+          <div class="title">${s.title}</div>
+          <div class="meta"><span class="qn">${s.qa.length} items</span></div>`;
+        card.onclick = ()=> startQaSection(i);
+      }
+      grid.appendChild(card);
+    });
+    host.appendChild(grid);
+  });
+  if(mode!=="mc") return;
+  // overall (mc-only — qa has no scoring)
+  let done=0, totQ=0, gained=0;
+  SECTIONS.forEach(s=>{ totQ+=s.mc.length; const r=store[s.id]; if(r){done++; gained+=r.best;} });
+  const op = pct(gained, totQ);
+  $("ovPct").textContent = op+"%";
+  $("ovBar").style.width = op+"%";
+  $("ovSub").textContent = `Sections attempted: ${done} / ${SECTIONS.length}`;
+}
+
+/* ---------- SECTION QUIZ ---------- */
+function startSection(i){
+  const s = SECTIONS[i];
+  cur = { secIdx:i, qIdx:0, answers:new Array(s.mc.length).fill(null), qs:shuffledQuestions(s) };
+  $("qTitle").textContent = s.title;
+  $("qIcon").textContent = s.icon;
+  renderQuestion();
+  show("quiz");
+}
+function renderQuestion(){
+  const q = cur.qs[cur.qIdx]; const n = cur.qs.length;
+  $("qText").textContent = q.q;
+  $("qLab").textContent = `${cur.qIdx+1} / ${n}`;
+  $("qBar").style.width = pct(cur.qIdx+1,n)+"%";
+  const opts = $("qOpts"); opts.innerHTML="";
+  const keys = ["A","B","C","D","E","F"];
+  const answered = cur.answers[cur.qIdx];
+  q.options.forEach((opt,idx)=>{
+    const b = document.createElement("button"); b.className="opt";
+    let mark = "";
+    if(answered!=null){
+      b.classList.add("disabled");
+      if(idx===q.answer){ b.classList.add("correct"); mark = `<span class="mark">✓</span>`; }
+      else if(idx===answered){ b.classList.add("wrong"); mark = `<span class="mark">✗</span>`; }
+    }
+    b.innerHTML = `<span class="key">${keys[idx]}</span><span class="txt">${opt}</span>${mark}`;
+    if(answered==null){ b.onclick = ()=>{ cur.answers[cur.qIdx]=idx; recordProgress(); renderQuestion(); }; }
+    opts.appendChild(b);
+  });
+  // dots
+  const dots = $("qDots"); dots.innerHTML="";
+  for(let k=0;k<n;k++){
+    const d=document.createElement("div");
+    d.className="dot"+(cur.answers[k]!=null?" answered":"")+(k===cur.qIdx?" current":"");
+    d.onclick=()=>{ cur.qIdx=k; renderQuestion(); };
+    dots.appendChild(d);
+  }
+  $("qPrev").disabled = cur.qIdx===0;
+  $("qNext").textContent = cur.qIdx===n-1 ? "Finish ✓" : "Next →";
+}
+$("qPrev").onclick = ()=>{ if(cur.qIdx>0){cur.qIdx--; renderQuestion();} };
+$("qNext").onclick = ()=>{
+  const n = cur.qs.length;
+  if(cur.qIdx < n-1){ cur.qIdx++; renderQuestion(); }
+  else finishSection();
+};
+$("qBack").onclick = ()=>{ renderHome(); show("home"); };
+
+/* progress is saved live after every answer (see recordProgress), so the
+   home screen's per-section badge is always current even mid-section. */
+function recordProgress(){
+  const s = SECTIONS[cur.secIdx];
+  let correct=0;
+  cur.qs.forEach((q,i)=>{ if(cur.answers[i]===q.answer) correct++; });
+  const prevBest = store[s.id]?.best ?? -1;
+  const prevAttempts = store[s.id]?.attempts ?? 0;
+  store[s.id] = { best: Math.max(prevBest, correct), last: cur.answers.slice(), attempts: prevAttempts };
+  saveStore();
+  return correct;
+}
+
+/* ---------- RESULT (per section) ---------- */
+function finishSection(){
+  const s = SECTIONS[cur.secIdx];
+  const correct = recordProgress();
+  store[s.id].attempts += 1;
+  saveStore();
+  renderResult(correct);
+  show("result");
+}
+function renderResult(correct){
+  const s = SECTIONS[cur.secIdx]; const n = cur.qs.length; const p = pct(correct,n);
+  const c = scoreColor(p);
+  const ring = $("rRing"); ring.style.setProperty("--p",p); ring.style.setProperty("--c",c);
+  $("rScore").textContent = `${correct}/${n}`;
+  $("rPct").textContent = p+"%";
+  $("rTitle").textContent = s.title;
+  $("rMsg").textContent = p>=80 ? "Excellent — strong recall on this section." :
+                          p>=50 ? "Good effort — review the misses below." :
+                                  "Worth another pass — check the explanations below.";
+  const rev = $("rReview"); rev.innerHTML="";
+  const keys=["A","B","C","D","E","F"];
+  cur.qs.forEach((q,i)=>{
+    const your = cur.answers[i]; const ok = your===q.answer;
+    const item = document.createElement("div"); item.className="rev-item";
+    let html = `<div class="rq"><span class="n">${i+1}.</span><span>${q.q}</span></div>`;
+    const yourTxt = your==null ? "<em>(no answer)</em>" : `${keys[your]}. ${q.options[your]}`;
+    html += `<div class="rev-row"><span class="tag ${ok?"ok":"no"}">${ok?"✓ You":"✗ You"}</span><span>${yourTxt}</span></div>`;
+    if(!ok){
+      html += `<div class="rev-row"><span class="tag ok">✓ Answer</span><span>${keys[q.answer]}. ${q.options[q.answer]}</span></div>`;
+    }
+    html += `<div class="explain"><b>Why:</b> ${q.explain}</div>`;
+    item.innerHTML = html;
+    rev.appendChild(item);
+  });
+  // Next section button
+  $("rNextSec").style.display = cur.secIdx < SECTIONS.length-1 ? "" : "none";
+}
+$("rRetry").onclick = ()=> startSection(cur.secIdx);
+$("rMenu").onclick = ()=>{ renderHome(); show("home"); };
+$("rBack").onclick = $("rMenu").onclick;
+$("rNextSec").onclick = ()=>{ if(cur.secIdx < SECTIONS.length-1) startSection(cur.secIdx+1); };
+
+/* ---------- QA (open question/answer, self-review — no scoring) ---------- */
+function startQaSection(i){
+  const s = SECTIONS[i];
+  $("qaTitle").textContent = s.title;
+  $("qaIcon").textContent = s.icon;
+  const list = $("qaList"); list.innerHTML="";
+  s.qa.forEach((item)=>{
+    const el = document.createElement("div"); el.className="qa-item";
+    el.innerHTML = `
+      <div class="qq">${item.q}</div>
+      <button class="qa-toggle">Show answer ▾</button>
+      <div class="qa-answer hidden">${mdToHtml(item.a)}</div>`;
+    const toggle = el.querySelector(".qa-toggle");
+    const answer = el.querySelector(".qa-answer");
+    toggle.onclick = ()=>{
+      const revealed = !answer.classList.contains("hidden");
+      answer.classList.toggle("hidden", revealed);
+      toggle.textContent = revealed ? "Show answer ▾" : "Hide answer ▴";
+    };
+    list.appendChild(el);
+  });
+  show("qa");
+}
+$("qaBack").onclick = ()=>{ renderHome(); show("home"); };
+
+/* ---------- OVERALL SUMMARY ---------- */
+function renderSummary(){
+  let totQ=0, gained=0, attempted=0;
+  const bars = $("sBars"); bars.innerHTML="";
+  SECTIONS.forEach(s=>{
+    const n=s.mc.length; totQ+=n;
+    const r = store[s.id];
+    const best = r? r.best : null;
+    if(r){ gained+=best; attempted++; }
+    const p = best==null?0:pct(best,n);
+    const c = best==null? "var(--track)" : scoreColor(p);
+    const row = document.createElement("div"); row.className="sumrow";
+    row.innerHTML = `
+      <div class="nm">${s.icon} ${s.title} ${best==null?'<span class="no">· not started</span>':''}</div>
+      <div class="bar"><i style="width:${p}%;background:${c}"></i></div>
+      <div class="sc">${best==null?'—':best+'/'+n}</div>`;
+    bars.appendChild(row);
+  });
+  const op = pct(gained,totQ);
+  const ring=$("sRing"); ring.style.setProperty("--p",op); ring.style.setProperty("--c",scoreColor(op));
+  $("sScore").textContent = op+"%";
+  $("sMsg").textContent = `${attempted} of ${SECTIONS.length} sections attempted · ${gained} correct across ${totQ} total questions (best per section).`;
+  show("summary");
+}
+$("btnSummary").onclick = renderSummary;
+$("sMenu").onclick = ()=>{ renderHome(); show("home"); };
+$("sBack").onclick = $("sMenu").onclick;
+
+/* ---------- RESET ---------- */
+function resetAll(){ if(confirm("Reset all saved progress?")){ store={}; saveStore(); renderHome(); show("home"); } }
+$("btnReset").onclick = resetAll;
+$("sReset").onclick = resetAll;
+
+/* ---------- keyboard ---------- */
+document.addEventListener("keydown",(e)=>{
+  if($("quiz").classList.contains("hidden")) return;
+  const q = cur.qs[cur.qIdx];
+  if(["1","2","3","4","5","6"].includes(e.key) && cur.answers[cur.qIdx]==null){
+    const idx = +e.key-1; if(idx < q.options.length){ cur.answers[cur.qIdx]=idx; recordProgress(); renderQuestion(); }
+  } else if(e.key==="Enter"){ $("qNext").click(); }
+  else if(e.key==="ArrowLeft"){ $("qPrev").click(); }
+  else if(e.key==="ArrowRight"){ $("qNext").click(); }
+});
+
+/* ---------- init ---------- */
+renderHome();
+show("home");
+</script>
+</body>
+</html>
