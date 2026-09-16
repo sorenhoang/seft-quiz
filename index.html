@@ -169,7 +169,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
    for why fetch()-ing local JSON is unreliable.
 ============================================================ */
 const MANIFEST = [
-  {category:"Backend",        icon:"⚙️", topics:[]},
+  {category:"Backend",        icon:"⚙️", topics:[
+    {title:"PostgreSQL", icon:"🐘", file:"quizzes/postgresql.html", sections:9},
+  ]},
   {category:"Infrastructure", icon:"☁️", topics:[
     {title:"Datadog", icon:"🐶", file:"quizzes/datadog.html", sections:25},
     {title:"Terraform", icon:"🏗️", file:"quizzes/terraform.html", sections:9},

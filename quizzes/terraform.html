@@ -333,14 +333,16 @@ kbd{background:var(--track);border-radius:6px;padding:1px 6px;font-size:.75rem;f
    Keep this in sync with index.html's MANIFEST — see SKILL.md step 7.
 ============================================================ */
 const SIDEBAR_MANIFEST = [
-  {category:"Backend",        icon:"⚙️", topics:[]},
-  {category:"Infrastructure", icon:"☁️", topics:[
+{category:"Backend", icon:"⚙️", topics:[
+    {title:"PostgreSQL", icon:"🐘", file:"postgresql.html", sections:9},
+  ]},
+{category:"Infrastructure", icon:"☁️", topics:[
     {title:"Datadog", icon:"🐶", file:"datadog.html", sections:25},
     {title:"Terraform", icon:"🏗️", file:"terraform.html", sections:9},
   ]},
-  {category:"AI",             icon:"🤖", topics:[]},
-  {category:"System Design",  icon:"🧩", topics:[]},
-  {category:"Behavioral",     icon:"🗣️", topics:[]},
+{category:"AI", icon:"🤖", topics:[]},
+{category:"System Design", icon:"🧩", topics:[]},
+{category:"Behavioral", icon:"🗣️", topics:[]},
 ];
 (function renderSidebar(){
   const slugify = s=> s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
